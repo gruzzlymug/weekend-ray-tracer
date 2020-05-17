@@ -1,4 +1,4 @@
-xyz.ppm: x
+xyz.ppm: rt
 	./rt > xyz.ppm
 
 x: rt.cpp
