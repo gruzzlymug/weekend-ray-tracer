@@ -5,19 +5,23 @@
 #include "ray.h"
 #include "vec3.h"
 
+class material;
+
 class s2
 {
     public:
         vec3 center;
         float radius;
+        std::weak_ptr<material> mat;
 
         s2() :
             center{0,0,0},
             radius{1.0}
         { /* empty */ }
-        s2(const vec3& c, float r) :
+        s2(const vec3& c, float r, std::weak_ptr<material> m) :
             center{c},
-            radius{r}
+            radius{r},
+            mat{m}
         { /* empty */ }
 
         bool hit(const ray& r, float tmin, float tmax, hit_wreck& rec) const;
@@ -46,6 +50,7 @@ bool s2::hit(const ray& r, float tmin, float tmax, hit_wreck& rec) const {
             rec.t = t1;
             rec.p = r.point_at_parameter(t1);
             rec.normal = unit_vector(rec.p - center); // or use: / radius;
+            rec.mat = mat;
             return true;
         }
         // check t2
@@ -54,6 +59,7 @@ bool s2::hit(const ray& r, float tmin, float tmax, hit_wreck& rec) const {
             rec.t = t2;
             rec.p = r.point_at_parameter(t2);
             rec.normal = unit_vector(rec.p - center);
+            rec.mat = mat;
             return true;
         }
     }
