@@ -64,8 +64,11 @@ class phong : public material {
         {
             // empty
         }
+        virtual ~phong() {
+            // empty
+        }
         bool scatter(const ray& incident, const hit_wreck& rec, vec3& attenuation, ray& scattered) {
-            vec3 light{-2,1,4};
+            vec3 light{+2,1,4};
             vec3 to_light = light - rec.p;
             vec3 to_eye = vec3(0,0,0)-rec.p;
             vec3 h = unit_vector(to_eye - to_light);
@@ -91,10 +94,81 @@ class matte : public material {
         {
             // empty
         }
+        virtual ~matte() {
+            // empty
+        }
         bool scatter(const ray& incident, const hit_wreck& rec, vec3& attenuation, ray& scattered) {
             vec3 rv = rec.normal + rand_in_unit_sphere();
             attenuation = albedo;
             scattered = ray(rec.p, rv - rec.p);
+            return true;
+        }
+};
+
+class transparent : public material {
+    vec3 albedo;
+
+    public:
+        transparent(const vec3& a)
+            : albedo{a}
+        {
+            // empty
+        }
+        virtual ~transparent() {
+            // empty
+        }
+        bool scatter(const ray& incident, const hit_wreck& rec, vec3& attenuation, ray& scattered) {
+            float abs_dot = abs(dot(incident.direction(), rec.normal));
+
+            // reflect a certain percent of the time
+            float t = drand48();
+            if (t > abs_dot*2) {
+                vec3 r = reflect(incident.direction(), rec.normal);
+                r += 0.4*rand_in_unit_sphere();
+                r = unit_vector(r);
+                if (dot(rec.normal, r) > 0) {
+                    attenuation = albedo;
+                    scattered = ray(rec.p, r);
+                    return true;
+                }
+                return false;
+            }
+
+            vec3 to = unit_vector(incident.direction());
+            vec3 n = unit_vector(rec.normal);
+
+
+            // start
+            float snell = 1.4;
+
+            if (dot(n, to) > 0) {
+                // exiting
+                snell = 1 / snell;
+                n = -n;
+            }
+
+            vec3 i2 = cross(n, -to);
+            float s_n_to_2 = dot(i2, i2);
+            float s_n_to = sqrt(s_n_to_2);
+
+            i2 = unit_vector(i2);
+            vec3 k2 = cross(i2, -n);
+
+            float s_nn_out = s_n_to / snell;
+
+            float cc = sqrt(1 - s_nn_out*s_nn_out);
+            if (cc != cc) {
+                // NaN check. Not compatible with -ffast-math
+                return false;
+            }
+            vec3 refr = -cc*n;
+            vec3 refr2 = s_nn_out*k2;
+            vec3 rrr = refr + refr2;
+
+
+            // done
+            attenuation = albedo;
+            scattered = ray(rec.p, rrr);
             return true;
         }
 };
@@ -107,6 +181,9 @@ class metal : public material {
             : albedo{a}
         {
 
+        }
+        virtual ~metal() {
+            // empty
         }
         bool scatter(const ray& incident, const hit_wreck& rec, vec3& attenuation, ray& scattered) {
             vec3 r = reflect(incident.direction(), rec.normal);
@@ -148,6 +225,7 @@ int main() {
     std::shared_ptr<material> mtl = std::make_shared<phong>(vec3(0.8,0,0));
     std::shared_ptr<material> mtl2 = std::make_shared<matte>(vec3(0.4,0.5,0.4));
     std::shared_ptr<material> mtl3 = std::make_shared<metal>(vec3(0.8,0.8,0.8));
+    std::shared_ptr<material> mtl4 = std::make_shared<transparent>(vec3(0.8,0.8,0.8));
 
     vec3 cc(-0.0, 0.0, -2.00);
     float rr = 1.0;
@@ -156,11 +234,14 @@ int main() {
     s2 q{dd, 99.0, mtl2};
     vec3 ee(-2.0, 0.0, -2.00);
     s2 w{ee, rr, mtl3};
+    vec3 fe(0.6, 0.0, -1.00);
+    s2 g{fe, 0.4, mtl4};
 
     std::vector<s2> things;
     things.emplace_back(s);
     things.emplace_back(q);
     things.emplace_back(w);
+    things.emplace_back(g);
     scene hitables{things};
 
     camera cam;
