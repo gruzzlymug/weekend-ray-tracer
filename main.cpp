@@ -118,6 +118,9 @@ class transparent : public material {
             // empty
         }
         bool scatter(const ray& incident, const hit_wreck& rec, vec3& attenuation, ray& scattered) {
+            float n1 = 1.4;
+            float n2 = 1.0;
+
             float abs_dot = abs(dot(incident.direction(), rec.normal));
 
             // reflect a certain percent of the time
@@ -139,11 +142,12 @@ class transparent : public material {
 
 
             // start
-            float snell = 1.4;
+            float snell = n1 / n2;
 
+            // see page RT Rendering, ch 26, eq 26.10 for better reflection
             if (dot(n, to) > 0) {
                 // exiting
-                snell = 1 / snell;
+                snell = n2 / n1;
                 n = -n;
             }
 
